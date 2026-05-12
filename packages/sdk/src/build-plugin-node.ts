@@ -177,32 +177,24 @@ export default app;`
 
 // ─── Start ──────────────────────────────────────────────────────────────────
 
-// Only bind a listener when this module is the entry point — i.e. invoked
-// via \`node server.mjs\` (or \`flue run\`, which spawns the same way).
-// When the bundle is \`import\`-ed by another server (e.g. a TanStack
-// Start / Nitro / Next.js custom server that wants to mount the Hono
-// app under a route prefix), we skip \`serve(...)\` entirely so no stray
-// port gets bound. The embedder uses the \`app\` named export above.
-//
-// Belt-and-suspenders: \`FLUE_AUTO_SERVE=0\` forces import-only behavior
-// even when the path-match heuristic gives a false positive (e.g. when
-// symlinks confuse the comparison), and \`FLUE_AUTO_SERVE=1\` forces the
-// listener to start regardless.
+// Bind a listener only when run directly; skip it when imported so an
+// embedder (TanStack Start / Nitro / Next.js custom server, etc.) can
+// mount the \`app\` named export without a stray port being bound.
+// Override with \`FLUE_AUTO_SERVE=0\` (force off) or \`FLUE_AUTO_SERVE=1\` (force on).
 function shouldAutoServe() {
   const override = process.env.FLUE_AUTO_SERVE;
-  if (override === '0' || override === 'false') return false;
-  if (override === '1' || override === 'true') return true;
+  if (override === '0') return false;
+  if (override === '1') return true;
   if (!process.argv[1]) return false;
   try {
-    // Compare realpaths on both sides: \`import.meta.url\` is already
-    // realpath-resolved by Node, but \`process.argv[1]\` is the path
-    // as the user typed it (or as the parent process spawned it).
-    // On macOS \`/tmp\` is a symlink to \`/private/tmp\`; on container
-    // mounts and CI runners the two routinely diverge. Without
-    // realpathSync this check returns false even when the module
-    // really is the entry point.
+    // Realpath both sides: \`import.meta.url\` is already realpath-resolved
+    // by Node, but \`process.argv[1]\` is the launch path verbatim. On
+    // macOS \`/tmp\` symlinks to \`/private/tmp\`; container bind mounts
+    // and CI runners diverge similarly. Without realpath the direct-run
+    // case is misclassified as an import.
     return fileURLToPath(import.meta.url) === realpathSync(process.argv[1]);
-  } catch {
+  } catch (err) {
+    console.warn('[flue] auto-serve entry-point check failed; not starting listener. Set FLUE_AUTO_SERVE=1 to override.', err);
     return false;
   }
 }
