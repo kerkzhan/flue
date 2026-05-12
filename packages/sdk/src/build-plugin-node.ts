@@ -165,15 +165,14 @@ if (!app || typeof app.fetch !== 'function') {
   throw new Error(
     '[flue] app.ts default export must be a Hono app or an object with a fetch(request) method.'
   );
-}
-export default app;`
+}`
 		: `// No app.ts: build the default app via the SDK so the generated entry
 // stays \`hono\`-free (users only need hono in their node_modules when
 // they author their own app.ts). The default mounts \`flue()\` at root
 // and renders canonical Flue envelopes for unmatched paths.
-export const app = createDefaultFlueApp();
-export default app;`
+export const app = createDefaultFlueApp();`
 }
+export default app;
 
 // ─── Start ──────────────────────────────────────────────────────────────────
 
